@@ -1,0 +1,58 @@
+# Preset Configurations
+presets:
+  default:
+    determinize: none
+    numeric-predicates: ['axisonly']
+    categorical-predicates: ['multisplit']  # ['singlesplit', 'valuegrouping']
+    impurity: 'entropy'
+    tolerance: 1e-5
+    safe-pruning: false
+
+  # Non-deterministic
+  cart:
+    numeric-predicates: ['axisonly']
+  linsvm:
+    numeric-predicates: ['axisonly', 'linear-linsvm']
+  logreg:
+    numeric-predicates: ['axisonly', 'linear-logreg']
+  oc1:
+    numeric-predicates: ['oc1']
+
+  # Categorical
+  avg:
+    categorical-predicates: ['valuegrouping']
+  singlesplit:
+    categorical-predicates: ['singlesplit']
+
+  # Deterministic
+  maxfreq:
+    determinize: 'maxfreq'
+    numeric-predicates: ['axisonly']
+  maxfreqlc:
+    determinize: 'maxfreq'
+    numeric-predicates: ['axisonly', 'linear-logreg']
+  minnorm:
+    determinize: 'minnorm'
+    numeric-predicates: ['axisonly']
+  minnormlc:
+    determinize: 'minnorm'
+    numeric-predicates: ['axisonly', 'linear-logreg']
+
+  # Multilabel
+  mlentropy:
+    determinize: auto
+    impurity: multilabelentropy
+
+  # Previous papers
+  sos:
+    determinize: none
+    numeric-predicates: ['axisonly']
+  sos-safepruning:
+    determinize: none
+    numeric-predicates: ['axisonly']
+    safe-pruning: true
+  linear-auroc:
+    determinize: none
+    numeric-predicates: ['axisonly', 'linear-logreg']
+    impurity: 'auroc'
+

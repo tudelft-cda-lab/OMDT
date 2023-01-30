@@ -1,0 +1,16 @@
+cloudpickle==2.2.1
+gurobipy==10.0.0
+gym==0.26.2
+gym-notices==0.0.8
+importlib-metadata==6.0.0
+joblib==1.2.0
+mpmath==1.2.1
+numpy==1.24.1
+pydot==1.4.2
+pyparsing==3.0.9
+scikit-learn==1.2.0
+scipy==1.10.0
+sympy==1.11.1
+threadpoolctl==3.1.0
+tqdm==4.64.1
+zipp==3.11.0

@@ -1,0 +1,67 @@
+gendata.readme -- Documentation on the data generation module of OC1.
+
+****************************************************************
+* Copyright (C) 1993, 1994                                      *
+* Department of Computer Science                                *
+* Johns Hopkins University                                      *
+*           Sreerama K. Murthy  (murthy@cs.jhu.edu)             *
+*           Steven Salzberg (salzberg@cs.jhu.edu)               *
+*           Simon Kasif (kasif@cs.jhu.edu)                      *
+****************************************************************
+
+"gendata", as the name suggests, is a program to generate data.
+It can do the following types of things :
+
+1. Generate random examples, with d real-valued attributes.
+2. Label the examples 
+      with random category numbers in the given range, or,
+      using a user-specified decision tree.
+
+The main use of gendata is to experiment with artificial datasets.  
+We can, for instance, start with a decision tree named DT1; generate
+random data points (examples) and label them according to DT1; use
+"mktree" to induce a decision tree DT2 on the data points, and use
+"display" to compare DT2 with DT1.  
+
+The following is a list of "gendata" options. The file "sample_session" 
+in this directory gives examples of some typical calls to "gendata".
+
+  -a  : all generated attribute values will greater than or equal to
+        this number.  Default = 0.
+
+  -b  : all generated attribute values will be less than or equal to
+        this number.  Default = 1.
+
+  -c  : number of categories 
+        If a decision tree is specified with the -D option, number
+        of categories are read from there in. Default = 2 if no
+        decision tree is specified and -u option is not used.
+
+  -d  : number of dimensions 
+        If a decision tree is specified with the -D option, number
+        of dimensions are read from there in. Otherwise, default=2.
+
+  -D  : File containing the decision tree
+        For sample of the decision tree format, see sample.dt.
+        If no file name is specified, or if there is some problem with 
+        reading the tree from the specified file, "gendata" labels the 
+        generated data points randomly, or leaves them unlabeled if -u
+        option is specified.
+        This option overrides the -d and -c options, as the decision tree also
+        lists the number of dimensions and the number of categories. 
+
+  -n  : number of examples (data points) to be generated
+        There is no default for this; the user must specify this number. 
+
+-o,t or T: file to write the generated data.
+        Default=stdout.  
+
+  -s  : integer seed for the random number generator
+        Default : system default for srand48() system call.
+
+  -u  : generate unlabeled points (default= Off).
+
+  -v  : verbose output. (default=FALSE)
+        If true, gendata will print extra information about what it's
+        doing.
+ 

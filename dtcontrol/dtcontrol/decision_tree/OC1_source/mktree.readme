@@ -1,0 +1,326 @@
+mktree.readme -- Documentation on the main tree-building module of OC1.
+
+*****************************************************************
+* Copyright (C) 1993, 1994                                      *
+* Department of Computer Science                                *
+* Johns Hopkins University                                      *
+*           Sreerama K. Murthy  (murthy@cs.jhu.edu)             *
+*           Steven Salzberg (salzberg@cs.jhu.edu)               *
+*           Simon Kasif (kasif@cs.jhu.edu)                      *
+*****************************************************************
+
+Welcome to OC1!
+
+MKTREE is the main tree-building program of OC1.  This program builds
+oblique and axis parallel decision trees from examples. 
+
+You can run experiments of many types using mktree.  You can divide
+your data randomly into two partitions, and use one for training
+(building the tree) and the other for testing (estimating the tree's
+accuracy as a classifier).  You can choose to do k-fold
+cross-validation experiments.  OC1 has many tree-building options
+available, most of which can be specified as command line options to
+mktree.  All these options are described below.  There are other
+options that can be set in the header file oc1.h. Most of these are
+hash-defined constants whose names should be self-explanatory. A
+setting that needs further explanation is the choice of impurity
+measure.  This is the measure that OC1 uses to estimate the "goodness"
+of a test at each node in a tree.  Six impurity measures are included
+in this package, but you can plug-in one of your own as well.  Read on
+for details.
+
+"mktree" allows  you to do the following types of things.
+  
+  1. Build a decision tree based on a randomly chosen portion of a labelled 
+     dataset, prune it and use it to classify the rest of the dataset,
+  2. Build a decision tree based on one dataset, and estimate the 
+     classification accuracy of the tree on another labelled dataset.
+  3. Perform a k-fold cross validation experiment.  The data will be divided
+     randomly into k partitions.  For each partition p, mktree builds a tree
+     on all the examples not in p, and tests the tree on the examples in p.
+     It produces a report giving the accuracy on the entire dataset, since
+     every example is tested exactly once.
+  4. Classify (i.e., label) the objects of a dataset with a pre-computed
+     decision tree.
+  5. Emulate CART (Breiman et al, 1984) with linear combinations, or standard
+     axis-parallel tree building methods, to a rough approximation.
+
+mktree assumes the following about a dataset:
+
+  1. All attributes are numeric valued.
+  2. The class label is integer valued.
+
+"mktree" has a lot of options, but it is possible to use the program
+without remembering all of these. Most options have default values.
+The options are listed below, with explanations where necessary.  You
+can read the file sample_session to see some examples of how to use
+the mktree command.
+
+     -a  : Consider only axis parallel splits at each node of the DT.
+           With this option, OC1 builds axis parallel trees.  The main
+           use of this option is that it is faster. For an intial guess 
+           of how good decision trees might do on your data, you can try 
+           out this option. Another use of this option is that, by 
+           choosing the appropriate impurity measure, you can make OC1 
+           approximate axis parallel methods such as C4.5 and CART, to get
+           an idea of their performance on your application.
+           Default = Off.
+
+     -A  : <Animation file> 
+           If a file name is specified with this option, and if no cross
+           validation is used, and if a training set is specified, mktree
+           outputs all hyperplane perturbations it made into the specified
+           file. This file can be used with the -D option of DISPLAY to
+           produce a PostScript pseudo-animation file.
+
+     -b  : <axis parallel bias>
+           This option enables the user to specify some bias in favour of
+           axis parallel splits. (Currently, mktree is not written to
+           support the bias in the other direction). 
+           ap_bias is a positive number greater than or equal to 1.0.
+           At any node of the decision tree, an oblique split is preferred
+           to an axis-parallel split only if the ratio of the axis parallel
+           impurity to the oblique impurity is greater than the ap_bias.
+ 
+     -B  : This option (takes no arguments and) indicates that the coefficients
+           will be perturbed in "best first" order.  At each node of the
+           tree, OC1 tries to perturb (adjust) the coefficients of
+           the hyperplane it is considering at any given time.  
+           This option tells OC1 to perturb the coefficient, that
+           gives the greatest improvement in the impurity measure, first.
+           Default = Sequential.
+           Sequential means that OC1 will cycle through all the coefficients 
+           of a hyperplane in order, perturbing each one to the best value
+           it can find for that coefficient.
+
+     -c  : <number of categories or classes> 
+           If a decision tree is provided with the -D option,
+           or if a training set is specified with the -t option, MKTREE
+           computes the number of categories and the number of attributes 
+           automatically. 
+           Please remember that the class labels have to be integers.
+
+     -d  : <number of dimensions (attributes or features)> 
+           If a decision tree is provided with the -D option,
+           or if a training set is specified with the -t option, MKTREE
+           computes the number of categories and the number of attributes 
+           automatically. 
+           Default:  The number of white-space or comma separated real 
+           numbers in line 1 of the training data file, minus 1. (The last 
+           field is assumed to be the category of the example).
+
+     -D  : <Decision tree file.>
+           If a training set is specified with the -t option, then OC1
+           builds a tree and writes it to this file.  If no training set
+           is specified, then OC1 assumes you want to use an existing tree
+           to classify or estimate the accuracy on some data, and 
+           the decision tree is read from this file.
+           The output file names are <decision tree file>
+           for the pruned tree and <decision tree file>.unpruned for the
+           unpruned tree. If no pruning is chosen (with the -p0 option), or
+           if no pruning is possible on the induced tree, the unpruned tree
+           is written to <decision tree file>.
+           If cross validation is chosen (-V option), the decision trees
+           corresponding to the first fold are written to files.
+           Default = <training data>.dt if a tree needs to be output.
+           No default if there is no training data.
+
+  -i or r: <number of restarts/iterations> 
+           Default = 20
+           "r=20" means that, at every node of the decision tree, we 
+           start with the best axis parallel split (if -o option is 
+           not chosen)and 19 different random hyperplanes, perturb 
+           each one of them to the best position possible, and choose 
+           the best of the resulting 20 hyperplanes.  Choosing a larger 
+           value of i will slow down the program, but can result in better 
+           trees, since the program searches more at each node for a good 
+           hyperplane.
+
+  -j or m: <maximum number of random jumps>
+           Default = 5 
+           When OC1 cannot improve any of the coefficients of a hyperplane
+           deterministically, it is stuck in a local minimum.  It then 
+           attempts to jump out of this minimum by choosing a random 
+           direction, and sliding the hyperplane in that direction. See the
+           enclosed paper for a detailed description of OC1's perturbation
+           algorithm.
+           "m=5" means that we try at most 5 times to jump in a random
+           direction, and we return to the deterministic perturbation algorithm
+           as soon as we find an improvement in the impurity measure.
+
+     -K  : CART-Linear Combinations mode.
+           If this mode is chosen, mktree suspends its own coefficient
+           perturbation algorithm, and executes CART's deterministic 
+           perturbation algorithm For a description of CART-LC, see Breiman
+           et al's 1984 book, chapter 5.
+           Note that the CART mode does NOT include backward feature 
+           elimination and attribute normalization (zero mean, unit standard
+           deviation) at each tree node. This mode is intended only to
+           contrast the coefficient perturbation methods of OC1 and CART-LC.
+
+     -l  : <Log file>.
+           Default = oc1.log
+           For every run of "mktree", most the parameter values are
+           listed in this file. It is useful to check up what  default values
+           are used for a particular run.  
+
+     -M  : <file to list misclassified examples in the test data>
+           Default = None
+           Users might want to know which examples are misclassified in
+           an experiment, to gain insights into, say, the particular attributes
+           being used.  If this option is specified, mktree writes all
+           misclassified examples to the specified file.
+
+     -n  : <number of training examples>
+           Default = All examples in the training file (given with the 
+           -t option).
+           If this number is less than the total points in the file specified
+           with the -t option, then mktree randomly chooses n data points for
+           the training set, and the rest of the file for the test set. 
+           If, however, -T option is chosen, all examples in the training
+           file are used for training.
+
+     -N  : No Normalize.
+           OC1's hill-climbing coefficient perturbation algorithm requires
+           that all attribute values be positive. So, at each tree node,
+           data is translated into the positive quadrant as a normalization
+           step, and the hyperplane induced is "unnormalized" subsequently.
+           This option enables the user to switch OFF this normalization.
+
+     -o  : Consider only oblique splits at each node of the DT.
+           counterpart of the -a option. Useful to see how purely oblique
+           tree building methods compare with methods that use a combination
+           of oblique and axis-parallel methods.
+
+     -p  : pruning portion 
+           Default = 0.1
+           OC1 always prunes decision trees by default, to avoid the problem
+           of overfitting. Currently, the only pruning method implemented is 
+           error complexity pruning using a separate pruning set. This 
+           option specifies to use a randomly chosen set of 
+           (pruning_portion * training set size) points from the training set
+           exclusively for pruning. 
+           eg: pruning_portion=0.3 means that 7/10s of the training data is 
+           used in actual building of the decision tree, and 3/10s in pruning. 
+           If pruning_portion = 0, no pruning is done. 
+
+     -R  : This option (with an argument) specifies that the
+           order of coefficient perturbation is random, and gives the  
+           number of random coefficient perturbations.  Thus, if -R50 is 
+           chosen, OC1 will repeat the following loop 50 times: pick a 
+           random coefficient and attempt to perturb it.
+           Default: None.
+
+     -s  : integer seed for the random number generator
+           Default : system default for the srand48() system call.
+
+     -t  : Data file used for training.
+           If no file name for test data is specified (with the -T option),
+           and if the number of training exaples given with the -n
+           option is less than the number of examples in the above file,
+           then test data is also read from this file.
+           No default.
+	   Every data file for OC1 should follow the following format:
+	      One instance per line
+              numeric attributes listed before the integer class label
+              columns separated by blank spaces, tabs or commas
+              missing values denoted by ?. (Mktree fills all missing values
+              with the mean of the respective attribute)
+
+     -T  : Data file used for testing.
+           No default.
+           Overrides the -n option.
+           Is overridden by the -V option.
+
+     -u  : Unlabeled.
+           This option specifies that the test data is unlabeled.
+           The data is classified using the decision tree which is in turn
+           read from a file or induced from the training data. The classified
+           data is written to <test data>.classified.
+
+     -v  : verbose output if specified once
+           very verbose output if specified more than once.
+           Use the very verbose mode to see individual coefficient
+           perturbations.
+           Default = Off
+
+     -V  : number of folds for cross validation  
+           -1 : leave-one-out cross validation, 
+            0 : no cross validation 
+           If a number k is specified, the data are divided randomly into
+           k partitions.  If k does not evenly divide into the number of 
+           examples, then the extra examples are put in the last partition.
+           Each partition is used once as a test set for a tree built 
+           from the remaining examples.  "Leave-one-out" is equivalent
+           to setting k=total number of examples.
+           Default = 0.
+
+
+In addition to the parameters that can be specified as command line
+options, one other important parameter is the "impurity measure"
+or metric that is used to determine the "goodness" of a hyperplane
+location.  The choice of this parameter often makes a big difference
+in the size and quality of the resulting tree.  "mktree" can use any
+one of a large class of impurity measures (see jair-94.ps paper for 
+details). The implementations of the following six measures are included 
+with the OC1 system.
+   Information Gain (Quinlan, 1986,1993)
+   Gini Index (Breiman et al, 1984)
+   Twoing Criterion (Breiman et al 1984)
+   Max Minority
+   Sum Minority
+   Variance (All three defined by heath et al 1993)
+OC1's default goodness measure is twoing rule.
+(For a brief description of these impurity measures, see jair94-paper.ps)
+
+To check which impurity measure is currently being used, check the
+value of the constant IMPURITY in the file "oc1.h".  To change the
+measure being used, simply change this constant and re-compile.
+
+To use a customized impurity measure "mymeasure", do the following.
+
+1. Add a function "mymeasure()" to the file "impurity_measures.c", that takes
+   no arguments and returns a float.
+2. This function can use two integer arrays "left_count" and 
+   "right_count", each of length "no_of_categories", specifying how many 
+   points of each category lie on the left and right sides of the hyperplane.
+   Note: These are declared as external variables in compute_impurity(). 
+   Just use them as read-only global variables to compute the impurity.  
+3. "mymeasure" should explicitly return a float value, which is the
+   impurity.  OC1 tries to find a location of the hyperplane that
+   MINIMIZES this impurity.  Special care should be taken for measures
+   like Information Gain that (in a sense) measure the "purity" of a
+   split, and not its impurity. One way to maintain uniformity is to
+   return the inverse of the purity (see the implementation 
+   for InfoGain and Twoing). Returning the negative instead of inverse
+   may cause problems because the code assumes at several places that
+   impurities are nonnegative.
+4. Define the # constant "IMPURITY" to be "mymeasure()", in the 
+   file "oc1.h".
+
+ 
+Some suggestions on parameter settings :
+ 
+1. Overfitting may be caused if the numbers given with the -i (-r) and -j (-m)
+   options are large.
+2. If the classification accuracy is much more for one of the categories than
+   the others, mktree is probably pruning the tree more than it should.
+   Run the program in the verbose mode to see the different stages in pruning.
+3. The impurity measure "Summinority" almost always gives the smallest
+   trees, but not necessarily the most accurate. So, if you are interested
+   in getting as small trees as possible, try Summinority first. If the
+   classification accuracies of the trees thus obtained are unsatisfactory,
+   you can experiment with other impurity measures.
+4. When trying to induce decision trees on reasonably large datasets, or
+   when running cross validation experiments, it is better to run mktree in
+   verbose mode (-v option), so that you know which stage of tree induction
+   the program is in.
+ 
+
+
+
+
+
+
+
+

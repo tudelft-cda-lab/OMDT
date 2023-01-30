@@ -1,0 +1,88 @@
+display.readme -- Documentation on the tree-display and animation 
+module of OC1.
+
+****************************************************************
+* Copyright (C) 1993, 1994                                      *
+* Department of Computer Science                                *
+* Johns Hopkins University                                      *
+*           Sreerama K. Murthy  (murthy@cs.jhu.edu)             *
+*           Steven Salzberg (salzberg@cs.jhu.edu)               *
+*           Simon Kasif (kasif@cs.jhu.edu)                      *
+****************************************************************
+
+The purpose of the DISPLAY program is to display, as PostScript(R)
+images, planar decision trees and data.  We found this to be a useful
+tool in visualizing and understanding the tree-building process.  
+
+DISPLAY can produce PostScript(R) displays for datasets alone and data
+with decision trees (axis parallel or oblique). It can also produce
+what we call, for lack of a better term, animations. Please note that
+the animation option is still in a very experimental stage.
+
+The following is a description of the various command line options 
+for "display".
+
+  -d :  number of dimensions (or attributes) 
+        If this number is not equal to 2, an error results.
+        It is not necessary to specify this parameter.
+  -D  : File containing the decision tree to be displayed.
+        For sample format, see sample.dt.
+        The numbers of categories and dimensions specified in the
+        decision tree file override the -d and -c options.
+        You can also give the "animation dumps" produced by
+        MKTREE with the -D option.  
+        Default: None.
+  -e :  No erase.
+        When DISPLAY is used for animation, successive perturbations of
+        the hyperplane are animated by drawing a perturbation, waiting
+        for some wait_time (-w option), erasing the perturbation and
+        drawing the next perturbation. By using -e option, you can turn 
+        off the erasing, so that all considered perturbations can be seen.
+        This can produce some really messy pictures.
+  -h :  Character string header (title) for the display.
+        Default="<datafile name>" or
+                "<datafile name>-<decision tree file name>", depending on
+                which of the -t and -D options are specified.
+  -o :  file to write the PostScript(R) output.
+        Default=stdout (the screen)
+  -t or -T : File containing the data points
+        For sample format, see linear.dta.
+        If a file name is specified with this option, the program 
+        automatically computes the number of examples, the number of 
+        attributes, and the number of categories.  
+        Default: None.
+  -v :  Verbose output. Default = FALSE
+  -w :  wait_time
+        Waiting time (in arbitrary units) between displaying one
+        hyperplane and erasing it. Default = 100.
+  -x :  Minimum x coordinate for the display. Default = 72. (These are 
+        PostScript(R) screen coordinates). 
+  -X :  Maximum x coordinate for the display. Default = 540.  
+  -y :  Minimum y coordinate for the display. Default = 72.  
+  -Y :  Maximum y coordinate for the display. Default = 640.  
+
+If a datafile is specified with the -t or -T option, "display" uses
+the numbers in the first column as the x coordinates, those in the
+second column as the y coordinates, and the those in the third column
+as the class numbers/labels. If a line has less or more than 3 columns,
+an error is reported. 
+
+"display" first finds the minimum and maximum x and y coordinates
+based on the dataset. These extreme coordinates, along with the
+display boundary, define scaling factors along the x and y dimensions.
+
+Animation: Notice that some PostScript(R) previewers and all printers
+draw the whole file and display it, if there are no page breaks. In
+such cases, the animation can not be seen in the default mode, as all
+ERASES are performed before the final picture is rendered by the
+postscript viewer. In this case, the -e option can be used (if the
+data set is small and not very complicated) to see all hyperplane
+positions considered by the program. The problem with -e option is
+that the picture gets complicated and useless too fast. Viewers like
+ghostscript execute postscript commands one-by-one, and hence can show
+the animation.  
+Don't try to print postscript files produced using animation files, if
+you have used any wait time. The printing may take forever.
+Typically, the animation postscript files are very large even for
+moderately complicated training sets.
+
