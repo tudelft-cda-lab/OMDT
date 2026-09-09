@@ -1,4 +1,5 @@
 from collections import defaultdict
+from typing import Any
 
 import numpy as np
 from sklearn.tree import DecisionTreeClassifier
@@ -14,6 +15,11 @@ class Tree:
 
     def act(self, observation):
         return self.root.act(observation)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "root": self.root.to_dict(),
+        }
 
     def to_string(self, feature_names, action_names):
         return self.root.to_string(0, feature_names, action_names)
@@ -116,6 +122,14 @@ class TreeNode:
 
         return self
 
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "feature": int(self.feature),
+            "threshold": float(self.threshold),
+            "left_child": self.left_child.to_dict(),
+            "right_child": self.right_child.to_dict(),
+        }
+
     def to_string(self, depth, feature_names, action_names):
         left_string = self.left_child.to_string(depth + 1, feature_names, action_names)
         right_string = self.right_child.to_string(
@@ -180,6 +194,9 @@ class TreeLeaf:
 
     def act(self, _):
         return self.action
+
+    def to_dict(self) -> dict[str, int]:
+        return {"action": int(self.action)}
 
     def to_string(self, depth, _, action_names):
         padding = "    " * depth

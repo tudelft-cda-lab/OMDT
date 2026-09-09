@@ -1,4 +1,6 @@
+import json
 import textwrap
+from pathlib import Path
 
 import gurobipy as gp
 import numpy as np
@@ -17,7 +19,7 @@ class OmdtSolver:
         n_cpus=1,
         verbose=False,
         time_limit=None,
-        output_dir="",
+        output_dir=Path("."),
         record_progress=False,
         seed=0,
         fixed_depth=True,
@@ -67,10 +69,7 @@ class OmdtSolver:
         nodes = range(1, 2**depth)
         leaves = range(2**depth, 2 ** (depth + 1))
 
-        self.thresholds_ = [
-            np.sort(np.unique(mdp.observations[:, j]))
-            for j in range(mdp.observations.shape[1])
-        ]
+        self.thresholds_ = [np.sort(np.unique(mdp.observations[:, j])) for j in range(mdp.observations.shape[1])]
 
         all_thresholds = []
         for feature_i in range(mdp.observations.shape[1]):
@@ -80,33 +79,19 @@ class OmdtSolver:
         self.model_ = gp.Model("MDP")
 
         upper_bound = 1 / (1 - self.gamma)
-        pi = self.model_.addVars(
-            states, actions, name="pi", lb=0, ub=upper_bound, vtype=GRB.CONTINUOUS
-        )
+        pi = self.model_.addVars(states, actions, name="pi", lb=0, ub=upper_bound, vtype=GRB.CONTINUOUS)
 
-        threshold = self.model_.addVars(
-            nodes, len(all_thresholds), name="threshold", vtype=GRB.BINARY
-        )
-        pred_action = self.model_.addVars(
-            leaves, actions, name="pred_action", vtype=GRB.BINARY
-        )
-        path = self.model_.addVars(
-            mdp.observations.shape[0], nodes, name="path", vtype=GRB.BINARY
-        )
-        takes_action = self.model_.addVars(
-            states, actions, name="takes_action", vtype=GRB.BINARY
-        )
+        threshold = self.model_.addVars(nodes, len(all_thresholds), name="threshold", vtype=GRB.BINARY)
+        pred_action = self.model_.addVars(leaves, actions, name="pred_action", vtype=GRB.BINARY)
+        path = self.model_.addVars(mdp.observations.shape[0], nodes, name="path", vtype=GRB.BINARY)
+        takes_action = self.model_.addVars(states, actions, name="takes_action", vtype=GRB.BINARY)
 
         for node in nodes:
-            self.model_.addConstr(
-                gp.quicksum(threshold[node, i] for i in range(len(all_thresholds))) == 1
-            )
+            self.model_.addConstr(gp.quicksum(threshold[node, i] for i in range(len(all_thresholds))) == 1)
 
         # Force deterministic policy
         for leaf in leaves:
-            self.model_.addConstr(
-                gp.quicksum(pred_action[leaf, action] for action in actions) == 1
-            )
+            self.model_.addConstr(gp.quicksum(pred_action[leaf, action] for action in actions) == 1)
 
         M = 1 / (1 - self.gamma)
 
@@ -123,15 +108,12 @@ class OmdtSolver:
                 # goes left (0) or right (1)
                 self.model_.addConstr(
                     gp.quicksum(
-                        coef * threshold[node, threshold_i]
-                        for threshold_i, coef in enumerate(threshold_coefficients)
+                        coef * threshold[node, threshold_i] for threshold_i, coef in enumerate(threshold_coefficients)
                     )
                     == path[i, node]
                 )
 
-            self.model_.addConstr(
-                gp.quicksum(takes_action[state, action] for action in actions) == 1
-            )
+            self.model_.addConstr(gp.quicksum(takes_action[state, action] for action in actions) == 1)
 
             for leaf in leaves:
                 A_l, A_r = self.__ancestors(leaf)
@@ -146,9 +128,7 @@ class OmdtSolver:
                     )
 
             for action in actions:
-                self.model_.addConstr(
-                    pi[state, action] <= M * takes_action[state, action]
-                )
+                self.model_.addConstr(pi[state, action] <= M * takes_action[state, action])
 
         for state in states:
             # Precomputing non zeros helps a lot because trans_probs are
@@ -158,9 +138,7 @@ class OmdtSolver:
             self.model_.addConstr(
                 gp.quicksum(pi[state, action] for action in actions)
                 - gp.quicksum(
-                    self.gamma
-                    * mdp.trans_probs[other_state, state, action]
-                    * pi[other_state, action]
+                    self.gamma * mdp.trans_probs[other_state, state, action] * pi[other_state, action]
                     for other_state, action in nonzero_indices
                 )
                 == mdp.initial_state_p[state]
@@ -168,9 +146,7 @@ class OmdtSolver:
 
         self.model_.setObjective(
             gp.quicksum(
-                pi[s, a] * np.sum(mdp.trans_probs[s, :, a] * mdp.rewards[s, :, a])
-                for s in states
-                for a in actions
+                pi[s, a] * np.sum(mdp.trans_probs[s, :, a] * mdp.rewards[s, :, a]) for s in states for a in actions
             ),
             GRB.MAXIMIZE,
         )
@@ -201,17 +177,13 @@ class OmdtSolver:
 
                     leaf_i *= 2
 
-                    self.model_.getVarByName(
-                        f"pred_action[{leaf_i},{action_i}]"
-                    ).Start = var.X
+                    self.model_.getVarByName(f"pred_action[{leaf_i},{action_i}]").Start = var.X
                 elif "takes_action" in var.VarName:
                     state_i, action_i = var.VarName.split("[")[1][:-1].split(",")
                     state_i = int(state_i)
                     action_i = int(action_i)
 
-                    self.model_.getVarByName(
-                        f"takes_action[{state_i},{action_i}]"
-                    ).Start = var.X
+                    self.model_.getVarByName(f"takes_action[{state_i},{action_i}]").Start = var.X
                 else:
                     self.model_.getVarByName(var.VarName).Start = var.X
 
@@ -261,10 +233,10 @@ class OmdtSolver:
             # predicts the same action
             self.tree_policy_ = Tree(TreeLeaf(0))
             self.optimal_ = False
-            self.objective_ = mdp.evaluate_policy(
-                self.tree_policy_.act, self.gamma, 1000000000
-            )
+            self.objective_ = mdp.evaluate_policy(self.tree_policy_.act, self.gamma, 1000000000)
             self.bound_ = self.model_.ObjBound
+            with open(self.output_dir / f"policy_depth_{depth}_seed_{self.seed}.json", "w") as file:
+                file.write(json.dumps(self.tree_policy_.to_dict()))
 
     def __model_vars_to_tree_new(
         self,
@@ -281,9 +253,7 @@ class OmdtSolver:
         self.split_thresholds_ = []
         self.leaf_actions_ = []
         for node in nodes:
-            threshold_i = np.argmax(
-                [threshold[node, i].x for i in range(len(all_thresholds))]
-            )
+            threshold_i = np.argmax([threshold[node, i].x for i in range(len(all_thresholds))])
             feature_i, threshold_value = all_thresholds[threshold_i]
 
             self.split_features_.append(feature_i)
@@ -348,9 +318,7 @@ class OmdtSolver:
             }
         )
 
-        with open(
-            f"{self.output_dir}policy_depth_{depth}_seed_{self.seed}.py", "w"
-        ) as file:
+        with open(self.output_dir / f"policy_depth_{depth}_seed_{self.seed}.py", "w") as file:
             # Print information about the policy as comments
             line_width = 60
             code = ""
@@ -376,6 +344,9 @@ class OmdtSolver:
 
             # Write the whole string as a python file
             file.write(code)
+
+        with open(self.output_dir / f"policy_depth_{depth}_seed_{self.seed}.json", "w") as file:
+            file.write(json.dumps(self.tree_policy_.to_dict()))
 
     def solve(
         self,
@@ -425,9 +396,7 @@ class OmdtSolver:
                 old_model = self.model_
 
             # At the end, set the tree_policy_ to the last feasible solution
-            for tree, optimal in zip(
-                reversed(self.trees_), reversed(self.trees_optimal_)
-            ):
+            for tree, optimal in zip(reversed(self.trees_), reversed(self.trees_optimal_)):
                 if tree is not None:
                     self.tree_policy_ = tree
                     self.optimal_ = optimal

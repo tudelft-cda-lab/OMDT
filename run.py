@@ -12,6 +12,7 @@ warnings.filterwarnings("ignore")
 parser = argparse.ArgumentParser(description="Run on a given environment")
 parser.add_argument("algorithm", type=str, help="the algorithm to train with")
 parser.add_argument("env_name", type=str, help="the environment (MDP) to train on")
+parser.add_argument("--mdp_file", type=str, default=None, help="a numpy saved set of arrays describing the MDP")
 parser.add_argument(
     "--max_depth",
     default=None,
@@ -24,9 +25,7 @@ parser.add_argument(
     type=int,
     help="time limit for solving one tree in seconds, by default train until optimality",
 )
-parser.add_argument(
-    "--n_cpus", default=1, type=int, help="number of CPU cores to train on"
-)
+parser.add_argument("--n_cpus", default=1, type=int, help="number of CPU cores to train on")
 parser.add_argument(
     "--gamma",
     default=0.99,
@@ -74,13 +73,42 @@ parser.add_argument(
 args = parser.parse_args()
 
 # Create an output directory if it does not yet exist
-mdp_output_dir = f"{args.output_dir}{args.env_name}/"
-Path(mdp_output_dir).mkdir(parents=True, exist_ok=True)
+mdp_output_dir = Path(args.output_dir) / args.env_name
+mdp_output_dir.mkdir(parents=True, exist_ok=True)
+
+if args.env_name == "CustomMdp":
+    env_name = Path(args.mdp_file).stem
+else:
+    env_name = args.env_name
 
 # Generate the mdp, possibly with extra arguments
-print(f"Generating MDP for {args.env_name}...")
-environment = importlib.import_module(f"environments.{args.env_name}")
-mdp = environment.generate_mdp()
+print(f"Generating MDP for {env_name}...")
+if args.env_name == "CustomMdp":
+    with np.load(args.mdp_file, allow_pickle=True) as data:
+        from omdt.mdp import MarkovDecisionProcess
+
+        observations = data["observations"]
+        trans_probs = data["trans_probs"]
+        rewards = data["rewards"]
+        initial_state_p = data["initial_state_probs"]
+
+        trans_probs = np.swapaxes(trans_probs, 1, 2)
+        rewards = np.swapaxes(rewards, 1, 2)
+
+        feature_names = list(data["feature_names"])
+        action_names = list(data["action_names"])
+
+        mdp = MarkovDecisionProcess(
+            trans_probs=trans_probs,
+            rewards=rewards,
+            initial_state_p=initial_state_p,
+            observations=observations,
+            feature_names=feature_names,
+            action_names=action_names,
+        )
+else:
+    environment = importlib.import_module(f"environments.{args.env_name}")
+    mdp = environment.generate_mdp()
 
 print("Solving...")
 
@@ -102,9 +130,7 @@ if args.algorithm.lower() == "omdt":
             output_dir=mdp_output_dir,
             seed=args.seed,
         )
-        method_name = (
-            f"omdt_depth_{args.max_depth}_seed_{args.seed}_timelimit_{args.time_limit}"
-        )
+        method_name = f"omdt_depth_{args.max_depth}_seed_{args.seed}_timelimit_{args.time_limit}"
 elif args.algorithm.lower() == "dtcontrol":
     if args.max_depth is not None:
         raise ValueError("dtcontrol is only supposed to be run with max_depth")
@@ -112,7 +138,7 @@ elif args.algorithm.lower() == "dtcontrol":
     from dtcontrol.solver import DtControlSolver
 
     solver = DtControlSolver(
-        output_dir=mdp_output_dir,
+        output_dir=str(mdp_output_dir) + "/",
         verbose=args.verbose,
     )
     method_name = "dtcontrol"
@@ -124,7 +150,7 @@ elif args.algorithm.lower() == "viper":
 
     solver = ViperSolver(
         max_depth=args.max_depth,
-        output_dir=mdp_output_dir,
+        output_dir=str(mdp_output_dir) + "/",
         verbose=args.verbose,
         random_seed=args.seed,
     )
@@ -153,16 +179,12 @@ print("Writing result files...")
 if args.export_graphviz:
     import pydot
 
-    integer_features = np.all(
-        np.isclose(mdp.observations % np.round(mdp.observations), 0), axis=0
-    )
+    integer_features = np.all(np.isclose(mdp.observations % np.round(mdp.observations), 0), axis=0)
 
-    dot_string = solver.tree_policy_.to_graphviz(
-        mdp.feature_names, mdp.action_names, integer_features
-    )
+    dot_string = solver.tree_policy_.to_graphviz(mdp.feature_names, mdp.action_names, integer_features)
     graph = pydot.graph_from_dot_data(dot_string)[0]
 
-    filename = f"{mdp_output_dir}{method_name}_visualized_policy"
+    filename = mdp_output_dir / f"{method_name}_visualized_policy"
     graph.write_png(f"{filename}.png")
     graph.write_pdf(f"{filename}.pdf")
     graph.write_dot(f"{filename}.dot")
@@ -178,11 +200,9 @@ else:
 # Optionally write a header first.
 with open(result_filename, "a") as file:
     if write_header:
-        file.write(
-            "method,mdp,seed,time_limit,max_depth,runtime,objective,bound,n_nodes,depth,optimal\n"
-        )
+        file.write("method,mdp,seed,time_limit,max_depth,runtime,objective,bound,n_nodes,depth,optimal\n")
 
     depth_str = args.max_depth if args.max_depth else ""
     file.write(
-        f"{args.algorithm},{args.env_name},{args.seed},{args.time_limit},{depth_str},{runtime},{objective},{bound},{n_nodes},{depth},{optimal}\n"
+        f"{args.algorithm},{env_name},{args.seed},{args.time_limit},{depth_str},{runtime},{objective},{bound},{n_nodes},{depth},{optimal}\n"
     )

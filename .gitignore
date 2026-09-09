@@ -1,6 +1,11 @@
 # Generated output files
 out*/
 figures/
+outresults.csv
+drn_exports/
+
+# PyCharm
+.idea/
 
 # Mac cache
 .DS_store
