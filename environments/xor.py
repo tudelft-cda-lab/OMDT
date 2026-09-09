@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 def generate_mdp(n_states=200, seed=0):
     random_state = np.random.RandomState(seed=seed)
-    observations = random_state.rand(n_states, 2)
+    observations = random_state.randint(low=-100, high=100, size=(n_states, 2))
 
     feature_names = ["X", "Y"]
     action_names = ["not_xor", "xor"]
@@ -22,7 +22,7 @@ def generate_mdp(n_states=200, seed=0):
 
     T[:, :, :] = 1 / len(observations)
 
-    threshold = 0.5
+    threshold = 0.0
 
     for s, observation in tqdm(enumerate(observations), total=len(observations)):
         if observation[0] >= threshold:
