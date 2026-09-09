@@ -86,21 +86,12 @@ print(f"Generating MDP for {env_name}...")
 if args.env_name == "CustomMdp":
     with np.load(args.mdp_file, allow_pickle=True) as data:
         from omdt.mdp import MarkovDecisionProcess
-        ## Boswachter side:
-        # observations=self._mdp.observations,
-        # trans_probs=self._mdp.trans_probs,
-        # rewards=self._mdp.rewards,
-        # initial_state_probs=self._mdp.initial_state_probs,
-        # terminal_states=np.array([self._mdp.terminal_states]),
-        # feature_names=np.array(self.feature_names),
-        # action_names=np.array(self.action_names),
 
         observations = data["observations"]
         trans_probs = data["trans_probs"]
         rewards = data["rewards"]
         initial_state_p = data["initial_state_probs"]
 
-        # Boswachter has from, action, to; OMDT expects from, to, action
         trans_probs = np.swapaxes(trans_probs, 1, 2)
         rewards = np.swapaxes(rewards, 1, 2)
 
